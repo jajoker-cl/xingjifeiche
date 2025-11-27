@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>赛博朋克城市 - 速度仪表版</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        #info {
+            color: #0ff;
+            background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            padding: 15px;
+            border-left: 4px solid #0ff;
+            text-shadow: 0 0 10px #0ff;
+            margin-bottom: 15px;
+            max-width: 300px;
+            pointer-events: none;
+        }
+        h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 1px; }
+        p { margin: 5px 0; font-size: 12px; color: #ccc; }
+        
+        .btn-group {
+            pointer-events: auto;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 12px 20px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+            outline: none;
+            border-radius: 8px;
+        }
+        button:active, button.active {
+            background: #0ff;
+            color: #000;
+            transform: scale(0.95);
+            box-shadow: 0 0 20px #0ff;
+        }
+        #btn-boost {
+            border-color: #ff0055;
+            color: #ff0055;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+        }
+        #btn-boost:active, #btn-boost.active {
+            background: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 20px #ff0055;
+        }
+
+        #music-status {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #ff0055;
+            text-shadow: 0 0 2px black;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            pointer-events: none;
+            text-align: center;
+            text-shadow: 0 0 5px #0ff;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            width: 80%;
+            max-width: 400px;
+        }
+        .key {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #fff;
+            color: #000;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0 2px;
+        }
+
+        /* --- 速度表样式 --- */
+        #speedometer-container {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #speed-value {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 60px;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+            line-height: 1;
+        }
+        #speed-unit {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        #speed-bar-bg {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            margin-top: 5px;
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        #speed-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0ff, #ff0055);
+            box-shadow: 0 0 10px #0ff;
+            transition: width 0.1s linear;
+        }
+
+        /* --- 移动端摇杆样式 --- */
+        #joystick-zone {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 120px;
+            height: 120px;
+            z-index: 50;
+            display: none; 
+        }
+        #joystick-base {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        }
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #0ff;
+            pointer-events: none;
+        }
+        #touch-look-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 40;
+        }
+        
+        @media (hover: none) and (pointer: coarse) {
+            #joystick-zone { display: block; }
+            .key { display: none; } 
+            .desktop-hint { display: none; }
+        }
+
+        /* --- 横屏极致优化 --- */
+        @media screen and (orientation: landscape) and (max-height: 600px) {
+            #info { display: none !important; }
+            #instructions { display: none !important; }
+            #ui-container {
+                top: 15px;
+                left: 15px;
+                width: auto;
+            }
+            .btn-group { gap: 8px; }
+            button {
+                padding: 8px 12px;
+                font-size: 12px;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                backdrop-filter: blur(2px);
+            }
+            #joystick-zone {
+                bottom: 20px;
+                left: 25px;
+                width: 90px;
+                height: 90px;
+            }
+            #joystick-knob {
+                width: 35px;
+                height: 35px;
+            }
+            #music-status { display: none; }
+            #speedometer-container {
+                bottom: 15px;
+                right: 15px;
+            }
+            #speed-value {
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="info">
+            <h1>NEON CITY // TURBO</h1>
+            <p>推进系统：SHIFT 氮气加速</p>
+            <p>视觉反馈：动态 FOV 拉伸</p>
+        </div>
+        <div class="btn-group">
+            <button id="btn-view">驾驶舱 [V]</button>
+            <button id="btn-music">引擎 [M]</button>
+            <button id="btn-boost">加速 [SHIFT]</button>
+        </div>
+        <div id="music-status">点击按钮启动音频</div>
+    </div>
+
+    <!-- 速度表 -->
+    <div id="speedometer-container">
+        <div id="speed-value">80</div>
+        <div id="speed-unit">KM/H</div>
+        <div id="speed-bar-bg">
+            <div id="speed-bar-fill"></div>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <span class="desktop-hint">WASD 移动 | SHIFT 加速 | 鼠标 观察</span>
+        <span class="mobile-hint">左摇杆: 移动 | 右屏: 观察 | 按钮: 加速</span>
+    </div>
+
+    <div id="joystick-zone">
+        <div id="joystick-base"></div>
+        <div id="joystick-knob"></div>
+    </div>
+    <div id="touch-look-zone"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        const config = {
+            baseSpeed: 0.8,  // 初始速度
+            boostSpeed: 6.0, // 加速速度
+            speed: 0.8,      // 当前速度
+            fogColor: 0x050210, 
+            buildingCount: 70, 
+            rainCount: 4000, 
+            carCount: 350 
+        };
+
+        let scene, camera, renderer, composer, controls;
+        let buildings = [];
+        let cars = [];
+        let streetLights = [];
+        let holograms = [];
+        let skyBeams = [];
+        let rainSystem;
+        let buildingMaterials = [];
+        let sun;
+        let gridHelper;
+        
+        let heroCar;
+        let heroJoystick; 
+        let isFPV = false;
+        
+        const keys = { w: false, a: false, s: false, d: false, shift: false };
+        let joystickData = { x: 0, y: 0, active: false }; 
+        
+        let targetX = 0; 
+        let currentX = 0; 
+        let targetY = 25; 
+        let currentY = 25; 
+        
+        let mouseLookX = 0; 
+        let mouseLookY = 0;
+        const viewLimitH = Math.PI / 2.5; 
+        const viewLimitV = Math.PI / 6;   
+        
+        const cameraGodPos = new THREE.Vector3(0, 60, 100);
+        const cameraGodTarget = new THREE.Vector3(0, 20, 0);
+
+        let audioCtx;
+        let isAudioPlaying = false;
+        let oscillators = []; 
+
+        const geometries = {};
+        const materials = {};
+
+        const palettes = [
+            { main: 0x00ffff, sec: 0xff00ff }, 
+            { main: 0xff0055, sec: 0x00ffaa }, 
+            { main: 0x8800ff, sec: 0xffcc00 }, 
+            { main: 0x0066ff, sec: 0xffffff }, 
+            { main: 0xff3300, sec: 0xffff00 }  
+        ];
+
+        const carColors = [
+            0xff0055, 0xffaa00, 0x00ffaa, 0x00aaff, 0xaa00ff, 0xffffff  
+        ];
+
+        // 速度表 DOM
+        const speedValueEl = document.getElementById('speed-value');
+        const speedBarFillEl = document.getElementById('speed-bar-fill');
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(config.fogColor);
+            scene.fog = new THREE.FogExp2(config.fogColor, 0.012);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000); 
+            camera.position.copy(cameraGodPos);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            document.body.appendChild(renderer.domElement);
+
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.15; 
+            bloomPass.strength = 1.6; 
+            bloomPass.radius = 0.6;
+
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            const ambientLight = new THREE.AmbientLight(0x444444); 
+            scene.add(ambientLight);
+            
+            const hemiLight = new THREE.HemisphereLight(0xff00ff, 0x000022, 0.6);
+            scene.add(hemiLight);
+
+            initSharedResources();
+
+            const ground = new THREE.Mesh(geometries.plane, materials.ground);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+            
+            gridHelper = new THREE.GridHelper(2000, 400, 0xff00ff, 0x111111);
+            gridHelper.position.y = 0.01;
+            scene.add(gridHelper);
+
+            generateHighQualityMaterials();
+            createSunset(); 
+            createStreetLights();
+
+            for (let i = 0; i < config.buildingCount; i++) {
+                const z = (Math.random() * 1400) - 1200; 
+                createSleekBuilding(z);
+            }
+
+            createRain();
+            createFlyingCars();
+            createHolograms(); 
+            createSkyBeams(); 
+            createHeroCar(); 
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.target.copy(cameraGodTarget);
+
+            window.addEventListener('resize', onWindowResize);
+
+            // Buttons
+            const btnView = document.getElementById('btn-view');
+            const btnMusic = document.getElementById('btn-music');
+            const btnBoost = document.getElementById('btn-boost');
+            
+            const clickHandler = (fn) => (e) => {
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                fn(); 
+            };
+
+            btnView.addEventListener('touchstart', clickHandler(toggleCamera));
+            btnView.addEventListener('click', toggleCamera); 
+            
+            btnMusic.addEventListener('touchstart', clickHandler(toggleMusic));
+            btnMusic.addEventListener('click', toggleMusic); 
+
+            // 加速按钮
+            const startBoost = (e) => {
+                if(e.cancelable) e.preventDefault();
+                keys.shift = true;
+                btnBoost.classList.add('active');
+            };
+            const endBoost = (e) => {
+                if(e.cancelable) e.preventDefault();
+                keys.shift = false;
+                btnBoost.classList.remove('active');
+            };
+
+            btnBoost.addEventListener('mousedown', startBoost);
+            btnBoost.addEventListener('mouseup', endBoost);
+            btnBoost.addEventListener('mouseleave', endBoost);
+            btnBoost.addEventListener('touchstart', startBoost);
+            btnBoost.addEventListener('touchend', endBoost);
+
+            document.addEventListener('mousemove', onDocumentMouseMove);
+            
+            window.addEventListener('keydown', (e) => {
+                const k = e.key.toLowerCase();
+                if(keys.hasOwnProperty(k)) keys[k] = true;
+                if(k === 'shift') keys.shift = true; 
+                if(k === 'v') toggleCamera();
+                if(k === 'm') toggleMusic();
+            });
+            window.addEventListener('keyup', (e) => {
+                const k = e.key.toLowerCase();
+                if(keys.hasOwnProperty(k)) keys[k] = false;
+                if(k === 'shift') keys.shift = false; 
+            });
+
+            initTouchControls();
+        }
+
+        function initTouchControls() {
+            const joystickZone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            const maxDist = 35; 
+            let startX, startY;
+
+            joystickZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickData.active = true;
+                const touch = e.changedTouches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                knob.style.transition = 'none';
+            }, { passive: false });
+
+            joystickZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!joystickData.active) return;
+                const touch = e.changedTouches[0];
+                
+                let deltaX = touch.clientX - startX;
+                let deltaY = touch.clientY - startY;
+                const dist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+                
+                if (dist > maxDist) {
+                    const ratio = maxDist / dist;
+                    deltaX *= ratio;
+                    deltaY *= ratio;
+                }
+
+                knob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+                joystickData.x = deltaX / maxDist;
+                joystickData.y = -deltaY / maxDist; 
+            }, { passive: false });
+
+            const resetJoystick = (e) => {
+                e.preventDefault();
+                joystickData.active = false;
+                joystickData.x = 0;
+                joystickData.y = 0;
+                knob.style.transition = 'transform 0.2s';
+                knob.style.transform = `translate(-50%, -50%)`;
+            };
+
+            joystickZone.addEventListener('touchend', resetJoystick);
+            joystickZone.addEventListener('touchcancel', resetJoystick);
+
+            const lookZone = document.getElementById('touch-look-zone');
+            let lookStartX, lookStartY;
+            let baseLookX = 0, baseLookY = 0; 
+
+            lookZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                lookStartX = touch.clientX;
+                lookStartY = touch.clientY;
+                baseLookX = -mouseLookX / viewLimitH; 
+                baseLookY = -mouseLookY / viewLimitV;
+            }, { passive: false });
+
+            lookZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isFPV) return;
+                const touch = e.changedTouches[0];
+                
+                const deltaX = (touch.clientX - lookStartX) / (window.innerWidth * 0.5) * 2; 
+                const deltaY = (touch.clientY - lookStartY) / (window.innerHeight) * 2;
+
+                let rawX = baseLookX + deltaX;
+                let rawY = baseLookY + deltaY;
+
+                rawX = Math.max(-1, Math.min(1, rawX));
+                rawY = Math.max(-1, Math.min(1, rawY));
+
+                mouseLookX = -rawX * viewLimitH;
+                mouseLookY = -rawY * viewLimitV;
+            }, { passive: false });
+        }
+
+        // ... createHolograms, createSkyBeams, initAudioEngine, playSynthDrone, stopSynthDrone, toggleMusic, createHeroCar 保持不变 ...
+        function createHolograms() { const holoCount = 50; for(let i=0; i<holoCount; i++) { const width = Math.random() * 30 + 15; const height = Math.random() * 15 + 8; const planeGeo = new THREE.PlaneGeometry(width, height); const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128; const ctx = canvas.getContext('2d'); ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.fillRect(0,0,256,128); ctx.strokeStyle = Math.random() > 0.5 ? '#00ffff' : '#ff00ff'; ctx.lineWidth = 8; ctx.strokeRect(10, 10, 236, 108); ctx.fillStyle = ctx.strokeStyle; ctx.font = 'bold 24px Arial'; ctx.fillText('CYBER', 30, 50); ctx.fillText('PUNK', 30, 80); ctx.fillStyle = '#ffffff'; for(let k=0; k<8; k++) { ctx.fillRect(160 + k*10, 30, 6, 60); } const tex = new THREE.CanvasTexture(canvas); const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }); const mesh = new THREE.Mesh(planeGeo, mat); mesh.position.set( (Math.random() - 0.5) * 250, Math.random() * 100 + 50, (Math.random() * 1400) - 1200 ); mesh.rotation.y = Math.random() * Math.PI; scene.add(mesh); holograms.push(mesh); } }
+        function createSkyBeams() { const beamCount = 10; const beamGeo = new THREE.ConeGeometry(2, 300, 32, 1, true); beamGeo.translate(0, 150, 0); for(let i=0; i<beamCount; i++) { const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.04, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }); const beam = new THREE.Mesh(beamGeo, mat); beam.position.set( (Math.random() - 0.5) * 300, 0, (Math.random() * 1000) - 800 ); beam.rotation.x = Math.random() * 0.5; beam.rotation.z = Math.random() * 0.5; beam.userData = { speedX: (Math.random() - 0.5) * 0.01, speedZ: (Math.random() - 0.5) * 0.01 }; scene.add(beam); skyBeams.push(beam); } }
+        function initAudioEngine() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if (audioCtx.state === 'suspended') { audioCtx.resume(); } }
+        function playSynthDrone() { initAudioEngine(); stopSynthDrone(); const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const gainNode = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter(); osc1.type = 'sawtooth'; osc1.frequency.value = 55; osc2.type = 'square'; osc2.frequency.value = 55.5; filter.type = 'lowpass'; filter.frequency.value = 400; filter.Q.value = 1; gainNode.gain.setValueAtTime(0, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2); const lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.5; const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 200; lfo.connect(lfoGain); lfoGain.connect(filter.frequency); lfo.start(); osc1.connect(filter); osc2.connect(filter); filter.connect(gainNode); gainNode.connect(audioCtx.destination); osc1.start(); osc2.start(); oscillators = [osc1, osc2, lfo]; isAudioPlaying = true; }
+        function stopSynthDrone() { if (oscillators.length > 0) { oscillators.forEach(osc => { try { osc.stop(); } catch(e){} }); oscillators = []; } isAudioPlaying = false; }
+        function toggleMusic() { const btn = document.getElementById('btn-music'); const status = document.getElementById('music-status'); if (!isAudioPlaying) { playSynthDrone(); btn.textContent = "关闭引擎声"; status.textContent = "运行中"; status.style.color = "#00ffaa"; } else { stopSynthDrone(); btn.textContent = "启动引擎"; status.textContent = "待机"; status.style.color = "#ff0055"; } }
+
+        function createHeroCar() {
+            heroCar = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(1.6, 0.5, 4.0); const bodyMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.2, metalness: 0.9 }); const body = new THREE.Mesh(bodyGeo, bodyMat); body.position.y = -0.25; heroCar.add(body);
+            const stripeGeo = new THREE.BoxGeometry(1.62, 0.05, 3.8); const stripeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 }); const stripe = new THREE.Mesh(stripeGeo, stripeMat); stripe.position.y = -0.25; heroCar.add(stripe);
+            const engineGeo = new THREE.CylinderGeometry(0.3, 0.3, 3.0, 16); engineGeo.rotateX(Math.PI / 2); const engineMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 }); const engineL = new THREE.Mesh(engineGeo, engineMat); engineL.position.set(-1.0, -0.2, 0.5); heroCar.add(engineL); const engineR = new THREE.Mesh(engineGeo, engineMat); engineR.position.set(1.0, -0.2, 0.5); heroCar.add(engineR);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff }); const tGeo = new THREE.CylinderGeometry(0.25, 0.1, 0.2, 16); tGeo.rotateX(Math.PI / 2); const tL = new THREE.Mesh(tGeo, glowMat); tL.position.set(-1.0, -0.2, 2.0); heroCar.add(tL); const tR = new THREE.Mesh(tGeo, glowMat); tR.position.set(1.0, -0.2, 2.0); heroCar.add(tR);
+            
+            const cockpit = new THREE.Group();
+            const cabinLight = new THREE.PointLight(0x00eaff, 3, 4); cabinLight.position.set(0, 0.5, -0.2); cockpit.add(cabinLight);
+            const floorGeo = new THREE.PlaneGeometry(1.4, 1.5); const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111 }); const floor = new THREE.Mesh(floorGeo, floorMat); floor.rotation.x = -Math.PI / 2; floor.position.set(0, -0.4, 0); cockpit.add(floor);
+            const dashGeo = new THREE.BoxGeometry(1.4, 0.3, 0.5); const dashMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 }); const dashboard = new THREE.Mesh(dashGeo, dashMat); dashboard.position.set(0, -0.1, -0.8); cockpit.add(dashboard);
+            const mainScreenGeo = new THREE.PlaneGeometry(0.7, 0.25); const screenMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide }); const mainScreen = new THREE.Mesh(mainScreenGeo, screenMat); mainScreen.position.set(0, -0.05, -0.54); mainScreen.rotation.x = -Math.PI / 6; cockpit.add(mainScreen);
+            const sideConsoleGeo = new THREE.BoxGeometry(0.2, 0.4, 1.2); const consoleMat = new THREE.MeshStandardMaterial({ color: 0x222222 }); const leftConsole = new THREE.Mesh(sideConsoleGeo, consoleMat); leftConsole.position.set(-0.6, -0.2, 0); cockpit.add(leftConsole); const rightConsole = new THREE.Mesh(sideConsoleGeo, consoleMat); rightConsole.position.set(0.6, -0.2, 0); cockpit.add(rightConsole);
+            
+            const btnGeo = new THREE.BoxGeometry(0.08, 0.02, 0.08);
+            const btnColors = [0xff0000, 0x00ff00, 0xffff00, 0x0000ff];
+            for(let i=0; i<8; i++) {
+                const col = btnColors[Math.floor(Math.random()*btnColors.length)];
+                const btnMat = new THREE.MeshBasicMaterial({ color: col });
+                const btnL = new THREE.Mesh(btnGeo, btnMat); btnL.position.set(-0.6, 0.02, -0.4 + i * 0.12); cockpit.add(btnL);
+                const btnR = new THREE.Mesh(btnGeo, btnMat); btnR.position.set(0.6, 0.02, -0.4 + i * 0.12); cockpit.add(btnR);
+            }
+
+            const yokeGroup = new THREE.Group(); const stickGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.3); const stick = new THREE.Mesh(stickGeo, consoleMat); stick.rotation.x = -0.5; yokeGroup.add(stick); const handleGeo = new THREE.BoxGeometry(0.35, 0.08, 0.05); const handle = new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({color: 0xaaaaaa, roughness: 0.5, metalness: 0.5})); handle.position.set(0, 0.15, -0.05); yokeGroup.add(handle); const handleSideGeo = new THREE.BoxGeometry(0.06, 0.18, 0.06); const handleL = new THREE.Mesh(handleSideGeo, new THREE.MeshStandardMaterial({color: 0x888888})); handleL.position.set(-0.18, 0.2, -0.05); yokeGroup.add(handleL); const handleR = new THREE.Mesh(handleSideGeo, new THREE.MeshStandardMaterial({color: 0x888888})); handleR.position.set(0.18, 0.2, -0.05); yokeGroup.add(handleR); yokeGroup.position.set(0, -0.15, -0.4); heroJoystick = yokeGroup; cockpit.add(yokeGroup);
+            const seatBackGeo = new THREE.BoxGeometry(0.6, 0.8, 0.1); const seatMat = new THREE.MeshStandardMaterial({ color: 0x111111 }); const seatBack = new THREE.Mesh(seatBackGeo, seatMat); seatBack.position.set(0, 0.1, 0.6); seatBack.rotation.x = -0.2; cockpit.add(seatBack); const headRestGeo = new THREE.BoxGeometry(0.3, 0.2, 0.1); const headRest = new THREE.Mesh(headRestGeo, seatMat); headRest.position.set(0, 0.6, 0.55); cockpit.add(headRest);
+            
+            const glassGeo = new THREE.BoxGeometry(1.5, 0.7, 1.5);
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0xccffff, transparent: true, opacity: 0.05, roughness: 0, metalness: 0.9, side: THREE.DoubleSide }); const glass = new THREE.Mesh(glassGeo, glassMat); glass.position.set(0, 0.1, -0.3); cockpit.add(glass);
+            const frameGeo = new THREE.BoxGeometry(0.05, 0.7, 0.05); const frameL = new THREE.Mesh(frameGeo, bodyMat); frameL.position.set(-0.75, 0.1, -0.3); frameL.rotation.z = -0.2; cockpit.add(frameL); const frameR = new THREE.Mesh(frameGeo, bodyMat); frameR.position.set(0.75, 0.1, -0.3); frameR.rotation.z = 0.2; cockpit.add(frameR);
+
+            const hudGeo = new THREE.PlaneGeometry(1.0, 0.25); 
+            const hudMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }); 
+            const hud = new THREE.Mesh(hudGeo, hudMat); hud.position.set(0, 0.3, -1.5); hud.rotation.x = -0.1; cockpit.add(hud);
+
+            heroCar.add(cockpit);
+            heroCar.position.set(0, 25, 0); 
+            scene.add(heroCar);
+        }
+
+        function onDocumentMouseMove(event) {
+            if (isFPV && !joystickData.active) { // 如果不是在用触摸屏
+                const x = (event.clientX / window.innerWidth) * 2 - 1;
+                const y = (event.clientY / window.innerHeight) * 2 - 1;
+                mouseLookX = -x * viewLimitH; 
+                mouseLookY = -y * viewLimitV; 
+            }
+        }
+
+        function toggleCamera() {
+            isFPV = !isFPV;
+            const btn = document.getElementById('btn-view');
+            const lookZone = document.getElementById('touch-look-zone');
+
+            if (isFPV) {
+                btn.textContent = "退出驾驶";
+                btn.style.background = "#ff0055";
+                btn.style.borderColor = "#ff0055";
+                controls.enabled = false;
+                lookZone.style.display = 'block'; // 开启触摸观察
+                
+                targetX = heroCar.position.x;
+                targetY = heroCar.position.y;
+                currentX = heroCar.position.x;
+                currentY = heroCar.position.y;
+            } else {
+                btn.textContent = "进入驾驶舱";
+                btn.style.background = "";
+                btn.style.borderColor = "#0ff";
+                controls.enabled = true;
+                lookZone.style.display = 'none'; // 关闭触摸观察
+                
+                camera.position.copy(cameraGodPos);
+                controls.target.copy(cameraGodTarget);
+                camera.rotation.set(0, 0, 0);
+            }
+        }
+
+        function initSharedResources() {
+            geometries.plane = new THREE.PlaneGeometry(2000, 2000); 
+            materials.ground = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.8 });
+            geometries.pole = new THREE.BoxGeometry(0.5, 12, 0.5);
+            geometries.arm = new THREE.BoxGeometry(4, 0.3, 0.3);
+            geometries.bulb = new THREE.BoxGeometry(1.5, 0.2, 0.8);
+            geometries.spot = new THREE.CircleGeometry(5, 16);
+            materials.pole = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4, metalness: 0.6, emissive: 0x004444, emissiveIntensity: 0.4 });
+            materials.bulb = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            materials.spot = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
+            geometries.carBody = new THREE.BoxGeometry(1.2, 0.4, 3.5);
+            geometries.carCabin = new THREE.BoxGeometry(0.8, 0.3, 1.5);
+            geometries.carEngine = new THREE.CylinderGeometry(0.2, 0.2, 2.5, 8);
+            geometries.carEngine.rotateX(Math.PI / 2); 
+            geometries.carThruster = new THREE.CylinderGeometry(0.15, 0.05, 0.5, 8);
+            geometries.carThruster.rotateX(Math.PI / 2); 
+            geometries.carTail = new THREE.BoxGeometry(1.0, 0.05, 0.05);
+            materials.carBody = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4, metalness: 0.9 });
+            materials.carEngineBase = new THREE.MeshBasicMaterial({ color: 0x222222 });
+            materials.carTail = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            materials.carColors = {};
+            carColors.forEach(color => {
+                materials.carColors[color] = {
+                    cabin: new THREE.MeshBasicMaterial({ color: color }),
+                    glow: new THREE.MeshBasicMaterial({ color: color })
+                };
+            });
+        }
+
+        function createSunset() {
+            const sunGeo = new THREE.CircleGeometry(400, 64); 
+            const sunMat = new THREE.MeshBasicMaterial({ 
+                color: 0xff5500, 
+                fog: false 
+            });
+            sun = new THREE.Mesh(sunGeo, sunMat);
+            sun.position.set(0, 100, -3000); 
+            scene.add(sun);
+
+            const barGeo = new THREE.PlaneGeometry(800, 20); 
+            const barMat = new THREE.MeshBasicMaterial({ 
+                color: 0x000000,
+                fog: false 
+            });
+            for(let i=0; i<8; i++) {
+                const bar = new THREE.Mesh(barGeo, barMat);
+                bar.scale.y = 1 + i * 0.5; 
+                bar.position.set(0, 100 - 150 + i * 40, -2990); 
+                scene.add(bar);
+            }
+        }
+
+        function createStreetLights() {
+            const zStep = 40; for (let z = -800; z < 200; z += zStep) { createLightPair(z); }
+        }
+        function createLightPair(z) {
+            const group = new THREE.Group();
+            const lightL = createSingleLight(); lightL.position.set(-18, 0, 0); lightL.rotation.y = Math.PI / 2; group.add(lightL);
+            const lightR = createSingleLight(); lightR.position.set(18, 0, 0); lightR.rotation.y = -Math.PI / 2; group.add(lightR);
+            group.position.z = z; scene.add(group); streetLights.push(group);
+        }
+        function createSingleLight() {
+            const lGroup = new THREE.Group();
+            const pole = new THREE.Mesh(geometries.pole, materials.pole); pole.position.y = 6; lGroup.add(pole);
+            const arm = new THREE.Mesh(geometries.arm, materials.pole); arm.position.set(2, 11.5, 0); lGroup.add(arm);
+            const bulb = new THREE.Mesh(geometries.bulb, materials.bulb); bulb.position.set(3.5, 11.3, 0); bulb.rotation.z = 0.2; lGroup.add(bulb);
+            const spot = new THREE.Mesh(geometries.spot, materials.spot); spot.rotation.x = -Math.PI / 2; spot.position.set(4, 0.1, 0); lGroup.add(spot);
+            return lGroup;
+        }
+        function generateHighQualityMaterials() {
+            for (let i = 0; i < 4; i++) {
+                const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                const gradient = ctx.createLinearGradient(0, 0, 0, 512); gradient.addColorStop(0, '#000000'); gradient.addColorStop(1, '#1a1a2e');
+                ctx.fillStyle = gradient; ctx.fillRect(0, 0, 256, 512);
+                const rows = 20; const cols = 5; const w = 256 / cols; const h = 512 / rows;
+                for (let r = 0; r < rows; r++) {
+                    const isLitFloor = Math.random() > 0.3;
+                    for (let c = 0; c < cols; c++) {
+                        ctx.fillStyle = '#050505'; ctx.fillRect(c*w, r*h, w, h);
+                        if (isLitFloor) {
+                            if (Math.random() > 0.4) {
+                                const hue = Math.random() > 0.8 ? 200 : 180; const light = 50 + Math.random() * 50;
+                                ctx.fillStyle = `hsl(${hue}, 80%, ${light}%)`; ctx.fillRect(c*w + 2, r*h + 4, w - 4, h - 8);
+                            } else { ctx.fillStyle = '#111'; ctx.fillRect(c*w + 2, r*h + 4, w - 4, h - 8); }
+                        }
+                    }
+                }
+                ctx.fillStyle = '#00ffff'; ctx.fillRect(0, 0, 10, 512); ctx.fillRect(246, 0, 10, 512);
+                const tex = new THREE.CanvasTexture(canvas); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                const mat = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.0, roughness: 0.1, metalness: 0.8 });
+                buildingMaterials.push(mat);
+            }
+        }
+        function createSleekBuilding(zPos) {
+            const group = new THREE.Group();
+            const palette = palettes[Math.floor(Math.random() * palettes.length)];
+            const height = Math.random() * 120 + 50; 
+            const width = Math.random() * 25 + 15; 
+            const depth = Math.random() * 25 + 15; 
+            const geometry = new THREE.BoxGeometry(width, height, depth); const material = buildingMaterials[Math.floor(Math.random() * buildingMaterials.length)];
+            const mesh = new THREE.Mesh(geometry, material); mesh.position.y = height / 2; group.add(mesh);
+            const edges = new THREE.EdgesGeometry(geometry); const lineMat = new THREE.LineBasicMaterial({ color: palette.main, linewidth: 2 });
+            const line = new THREE.LineSegments(edges, lineMat); line.position.y = height / 2; line.scale.set(1.01, 1.001, 1.01); group.add(line);
+            const topH = Math.random() * 5 + 2; const topGeo = new THREE.BoxGeometry(width * 0.6, topH, depth * 0.6);
+            const topMesh = new THREE.Mesh(topGeo, new THREE.MeshBasicMaterial({ color: 0x111111 })); topMesh.position.y = height + topH / 2; group.add(topMesh);
+            const topEdges = new THREE.EdgesGeometry(topGeo); const topLine = new THREE.LineSegments(topEdges, new THREE.LineBasicMaterial({ color: palette.sec }));
+            topLine.position.y = height + topH / 2; group.add(topLine);
+            const beaconGeo = new THREE.CylinderGeometry(0.1, 0.1, 10, 8); const beaconMesh = new THREE.Mesh(beaconGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            beaconMesh.position.y = height + topH + 5; group.add(beaconMesh);
+            if (Math.random() > 0.5) {
+                const signW = 3; const signH = 10; const signGeo = new THREE.PlaneGeometry(signW, signH);
+                const signMat = new THREE.MeshBasicMaterial({ color: palette.sec, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+                const sign = new THREE.Mesh(signGeo, signMat); sign.position.set(width/2 + 0.5, height * 0.7, 0); sign.rotation.y = Math.PI / 2; group.add(sign);
+            }
+            const xPos = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 30 + 35); 
+            group.position.set(xPos, 0, zPos); scene.add(group); buildings.push(group);
+        }
+        function createRain() {
+            const rainGeo = new THREE.BufferGeometry(); const positions = [];
+            for (let i = 0; i < config.rainCount; i++) {
+                positions.push((Math.random() - 0.5) * 400); positions.push(Math.random() * 100); positions.push((Math.random() - 0.5) * 400);
+            }
+            rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const rainMat = new THREE.PointsMaterial({ color: 0x88ccff, size: 0.15, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+            rainSystem = new THREE.Points(rainGeo, rainMat); scene.add(rainSystem);
+        }
+        function createFlyingCars() {
+            for(let i=0; i<config.carCount; i++) {
+                const carGroup = new THREE.Group();
+                const colorHex = carColors[Math.floor(Math.random() * carColors.length)];
+                const mats = materials.carColors[colorHex];
+                const body = new THREE.Mesh(geometries.carBody, materials.carBody); carGroup.add(body);
+                const cabin = new THREE.Mesh(geometries.carCabin, mats.cabin); cabin.position.set(0, 0.35, -0.2); carGroup.add(cabin);
+                const engineL = new THREE.Mesh(geometries.carEngine, materials.carEngineBase); engineL.position.set(-0.8, 0, 0.5); carGroup.add(engineL);
+                const engineR = new THREE.Mesh(geometries.carEngine, materials.carEngineBase); engineR.position.set(0.8, 0, 0.5); carGroup.add(engineR);
+                const thrusterL = new THREE.Mesh(geometries.carThruster, mats.glow); thrusterL.position.set(-0.8, 0, 1.8); carGroup.add(thrusterL);
+                const thrusterR = new THREE.Mesh(geometries.carThruster, mats.glow); thrusterR.position.set(0.8, 0, 1.8); carGroup.add(thrusterR);
+                const tailLight = new THREE.Mesh(geometries.carTail, materials.carTail); tailLight.position.set(0, 0.1, 1.76); carGroup.add(tailLight);
+                let xPos = (Math.random() - 0.5) * 80; if (Math.abs(xPos) < 10) { xPos = xPos > 0 ? 10 : -10; }
+                carGroup.position.x = xPos; 
+                const isHigh = Math.random() > 0.8;
+                if (isHigh) { carGroup.position.y = Math.random() * 60 + 60; } else { carGroup.position.y = Math.random() * 30 + 10; }
+                carGroup.position.z = (Math.random() - 0.5) * 600;
+                carGroup.userData = { speed: 1.5 + Math.random() * 3.0, laneOffset: Math.random() * 10 };
+                cars.push(carGroup); scene.add(carGroup);
+            }
+        }
+
+        function updateWorld() {
+            const time = Date.now() * 0.002;
+
+            // --- 速度控制平滑过渡 (修改插值) ---
+            const targetSpeed = keys.shift ? config.boostSpeed : config.baseSpeed;
+            // 使用更小的系数 0.008 来减缓加速过程
+            const lerpFactor = keys.shift ? 0.008 : 0.02; // 加速慢，减速稍微快一点点
+            config.speed += (targetSpeed - config.speed) * lerpFactor;
+
+            // --- 更新速度表 ---
+            // 将 config.speed 映射到仪表读数 (大约 0-400 KM/H)
+            // baseSpeed 0.8 -> ~80, boostSpeed 6.0 -> ~400
+            const speedKmh = Math.floor(config.speed * 60 + 30);
+            speedValueEl.textContent = speedKmh;
+            
+            // 更新进度条
+            const percent = Math.min(100, (speedKmh / 400) * 100);
+            speedBarFillEl.style.width = percent + '%';
+            // 颜色变化：低速蓝 -> 高速红
+            const hue = 180 - (percent * 1.8); // 180(Cyan) -> 0(Red)
+            speedBarFillEl.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+            speedBarFillEl.style.boxShadow = `0 0 10px hsl(${hue}, 100%, 50%)`;
+
+
+            // --- FOV 动态变化 ---
+            const targetFov = keys.shift ? 85 : 60; 
+            if (Math.abs(camera.fov - targetFov) > 0.1) {
+                camera.fov += (targetFov - camera.fov) * 0.02; // FOV 变化也稍微变慢配合速度
+                camera.updateProjectionMatrix();
+            }
+
+            // --- 混合操控逻辑 ---
+            if (isFPV) {
+                const moveSpeed = 0.8; 
+                const liftSpeed = 0.6; 
+
+                if (keys.a) targetX -= moveSpeed;
+                if (keys.d) targetX += moveSpeed;
+                if (keys.w) targetY += liftSpeed;
+                if (keys.s) targetY -= liftSpeed;
+
+                if (joystickData.active) {
+                    targetX += joystickData.x * moveSpeed;
+                    targetY += joystickData.y * liftSpeed;
+                }
+
+                if (targetX > 30) targetX = 30;
+                if (targetX < -30) targetX = -30;
+                if (targetY > 120) targetY = 120;
+                if (targetY < 5) targetY = 5;
+            }
+
+            buildings.forEach(b => {
+                b.position.z += config.speed;
+                if (b.position.z > 200) { 
+                    b.position.z = -1200; 
+                    b.position.x = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 30 + 35); 
+                }
+            });
+            
+            holograms.forEach(h => {
+                h.position.z += config.speed;
+                if (h.position.z > 200) {
+                    h.position.z = -1200;
+                    h.position.x = (Math.random() - 0.5) * 150;
+                    h.position.y = Math.random() * 60 + 60;
+                }
+                h.rotation.y += 0.01; 
+            });
+
+            skyBeams.forEach(beam => {
+                beam.position.z += config.speed;
+                if(beam.position.z > 200) {
+                    beam.position.z = -800;
+                    beam.position.x = (Math.random() - 0.5) * 300;
+                }
+                beam.rotation.x += Math.sin(time * 0.5) * 0.002;
+                beam.rotation.z += Math.cos(time * 0.3) * 0.002;
+            });
+            
+            streetLights.forEach(sl => {
+                sl.position.z += config.speed;
+                if (sl.position.z > 200) { sl.position.z = -800; }
+            });
+
+            if(gridHelper) { gridHelper.position.z = (gridHelper.position.z + config.speed) % 40; }
+
+            const positions = rainSystem.geometry.attributes.position.array;
+            for(let i = 1; i < positions.length; i += 3) {
+                positions[i] -= 1.5; positions[i+1] += config.speed; 
+                if (positions[i] < 0) positions[i] = 100;
+                if (positions[i+1] > 200) positions[i+1] = -600;
+            }
+            rainSystem.geometry.attributes.position.needsUpdate = true;
+
+            cars.forEach((car) => {
+                let moveSpeed = config.speed; 
+                moveSpeed -= (car.userData.speed * 0.3); 
+                
+                car.position.z += moveSpeed;
+                car.position.y += Math.sin(time + car.userData.laneOffset) * 0.05;
+                if(car.position.z > 300) {
+                    car.position.z = -900; 
+                    let xPos = (Math.random() - 0.5) * 80;
+                    if (Math.abs(xPos) < 10) xPos = xPos > 0 ? 10 : -10;
+                    car.position.x = xPos;
+                    if (car.position.y > 50) { car.position.y = Math.random() * 60 + 60; } else { car.position.y = Math.random() * 30 + 10; }
+                }
+                if(car.position.z < -1200) { car.position.z = 200; }
+            });
+
+            if(heroCar) {
+                if (isFPV) {
+                    currentX += (targetX - currentX) * 0.05;
+                    currentY += (targetY - currentY) * 0.05;
+                    
+                    heroCar.position.x = currentX;
+                    heroCar.position.y = currentY;
+
+                    heroCar.rotation.z = (currentX - targetX) * 0.02;
+                    heroCar.rotation.x = (currentY - targetY) * 0.01;
+
+                    if(heroJoystick) {
+                        heroJoystick.rotation.z = -(targetX - currentX) * 0.2;
+                    }
+                } else {
+                    heroCar.rotation.z = Math.sin(time) * 0.01;
+                    heroCar.rotation.x = 0;
+                    heroCar.position.y = currentY + Math.sin(time * 2) * 0.5;
+                }
+                
+                if (isFPV) {
+                    const carPos = heroCar.position;
+                    const eyeX = carPos.x;
+                    const eyeY = carPos.y + 0.45; 
+                    const eyeZ = carPos.z + 0.2; 
+                    camera.position.set(eyeX, eyeY, eyeZ);
+
+                    camera.rotation.set(
+                        mouseLookY * 0.5 + heroCar.rotation.x, 
+                        mouseLookX,  
+                        heroCar.rotation.z * 0.5, 
+                        'YXZ'
+                    );
+                }
+            }
+
+            if (!isFPV) {
+                const camTime = Date.now() * 0.0005;
+                camera.position.y = 50 + Math.sin(camTime) * 1.0;
+                controls.update();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updateWorld();
+            composer.render();
+        }
+    </script>
+</body>
+</html>
